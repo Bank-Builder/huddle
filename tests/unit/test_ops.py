@@ -34,9 +34,7 @@ def test_theme_list_and_set(xdg_home: Path) -> None:
     assert "unknown" in bad
 
 
-def test_cli_theme_commands(
-    xdg_home: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_cli_theme_commands(xdg_home: Path, capsys: pytest.CaptureFixture[str]) -> None:
     _ = xdg_home
     assert main(["theme", "list"]) == 0
     assert "developer" in capsys.readouterr().out

@@ -54,6 +54,7 @@ Collectors gather structured context. The engine schedules and caches it.
 Renderers (Kitty, Bash, JSON) turn snapshots into output without collecting.
 
 See `PLAN.md` for the full design and roadmap.
+See `docs/packaging.md` for build/release notes (PyPI publish is opt-in only).
 
 ## License
 

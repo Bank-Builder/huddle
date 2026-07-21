@@ -779,33 +779,46 @@ exclude_lines = [
 ]
 ```
 
-## Makefile targets (required)
+## Makefile (required, keep simple)
 
-All targets invoke tools via `uv run` / `uv build` (never bare global binaries).
+Ship a root `Makefile` that wraps uv. No fancy help text, no smoke target in Make.
 
-```make
-lint:        ## uv run ruff check .
-fmt:         ## uv run ruff format .
-fmt-check:   ## uv run ruff format --check .
-typecheck:   ## uv run mypy
-test:        ## uv run pytest --cov --cov-report=term-missing
-check:       ## lint + fmt-check + typecheck + test
-build:       ## uv build --no-sources
-smoke:       ## uv venv + uv pip install wheel; hudctl version
-sync:        ## uv sync --group dev
+```makefile
+.PHONY: sync lint fmt check test typecheck build
+
+sync:
+	uv sync --group dev
+
+lint:
+	uv run ruff check .
+	uv run ruff format --check .
+
+fmt:
+	uv run ruff format .
+
+typecheck:
+	uv run mypy
+
+test:
+	uv run pytest --cov --cov-report=term-missing
+
+check: lint typecheck test
+
+build:
+	uv build --no-sources
 ```
 
-CI must run `uv sync --group dev` then `make check` on Python 3.12 and 3.13.
+CI: `uv sync --group dev` then `make check` on Python 3.12 and 3.13.
 
 ## Local developer workflow
 
 ```bash
 uv python pin 3.12
-uv sync --group dev
+make sync
 make fmt
 make check
 uv run hudctl version
-uv build --no-sources
+make build
 ```
 
 ## Optional: pre-commit (Phase 0 or 1)
@@ -902,19 +915,19 @@ Work in small commits. Each phase ends with tests green and a working installabl
 4. Embed locked `[tool.ruff]`, `[tool.mypy]`, `[tool.pytest.ini_options]`, `[tool.coverage.*]` sections from this PLAN
 5. Add minimal `hudctl.cli.main:main` that prints version and exits 0
 6. `uv sync --group dev` and commit `uv.lock` + `.python-version`
-7. Add `Makefile` targets: `sync`, `lint`, `fmt`, `fmt-check`, `typecheck`, `test`, `check`, `build`, `smoke` (all via uv)
+7. Add simple root `Makefile` (`sync`, `lint`, `fmt`, `typecheck`, `test`, `check`, `build`)
 8. Add `tests/unit/test_version.py`
-9. Add GitHub Actions `ci.yml` using `astral-sh/setup-uv`, matrix 3.12/3.13, `uv sync --group dev`, `make check`
+9. Add GitHub Actions `ci.yml` using `astral-sh/setup-uv`, matrix 3.12/3.13, `make sync` + `make check`
 10. Optional: `.pre-commit-config.yaml` for Ruff + mypy
 11. Update README with `uv tool install hudctl` and `pip install hudctl`
 
 **Exit criteria:**
 
 ```bash
-uv sync --group dev
+make sync
 make check
 uv run hudctl version
-uv build --no-sources
+make build
 ```
 
 **Commit:** `chore: scaffold hudctl package with uv for PyPI`

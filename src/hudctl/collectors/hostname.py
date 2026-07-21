@@ -16,7 +16,9 @@ class HostnameCollector(Collector):
     interval = 60.0
 
     def __init__(self, *, gethostname: Callable[[], str] | None = None) -> None:
-        self._gethostname = gethostname if gethostname is not None else socket.gethostname
+        self._gethostname = (
+            gethostname if gethostname is not None else socket.gethostname
+        )
 
     def collect(self) -> dict[str, Any]:
         full = self._gethostname()

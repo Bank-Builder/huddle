@@ -47,7 +47,9 @@ class KubernetesCollector(Collector):
         )
         self._kubeconfig = kubeconfig
         self._read_text = (
-            read_text if read_text is not None else (lambda p: p.read_text(encoding="utf-8"))
+            read_text
+            if read_text is not None
+            else (lambda p: p.read_text(encoding="utf-8"))
         )
 
     def collect(self) -> dict[str, Any]:

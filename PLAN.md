@@ -13,7 +13,11 @@
 **CLI / installable package:** `hudctl`
 
 ```bash
+# end users (any installer)
 pip install hudctl
+# or
+uv tool install hudctl
+
 hudctl start
 ```
 
@@ -69,7 +73,8 @@ This avoids clashing with the existing `huddle` PyPI project while keeping famil
 * No shell framework required
 * No tmux required
 * No root privileges required
-* User-level installation via `pip install hudctl`
+* User-level installation via `pip install hudctl` or `uv tool install hudctl`
+* **Development and release tooling: uv** (venv, sync, lock, run, build, publish)
 * User-level systemd service
 * Very low CPU usage (<1%)
 * Very low memory usage (<20MB)
@@ -123,7 +128,9 @@ huddle/                          # git repository root
     PLAN.md
     SECURITY.md
     pyproject.toml               # sole packaging config
-    Makefile
+    uv.lock                      # committed; reproducible deps
+    .python-version              # pinned via uv (3.12+)
+    Makefile                     # wraps uv run / uv build
     .gitignore
     .github/
         workflows/
@@ -197,7 +204,9 @@ huddle/                          # git repository root
         custom_collector/
 ```
 
-Removed: top-level `installer/` and `cli/` as separate trees. Install/doctor live under `hudctl.cli` and are invoked via `hudctl` subcommands after `pip install`.
+Removed: top-level `installer/` and `cli/` as separate trees. Install/doctor live under `hudctl.cli` and are invoked via `hudctl` subcommands after install.
+
+**Dev toolchain:** [uv](https://docs.astral.sh/uv/) is mandatory for contributors and CI. Do not use bare `pip`/`venv`/`python -m build`/`twine` in project docs or Makefile targets.
 
 ---
 
@@ -237,15 +246,19 @@ classifiers = [
 ]
 dependencies = []   # stdlib only for core
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
   "pytest>=8",
   "pytest-cov>=5",
   "ruff>=0.6",
   "mypy>=1.11",
-  "build>=1.2",
-  "twine>=5",
 ]
+
+# Prefer uv dependency-groups over optional-dependencies for dev tools.
+# End-user runtime deps stay empty (stdlib only).
+
+[tool.uv]
+package = true
 
 [project.scripts]
 hudctl = "hudctl.cli.main:main"
@@ -288,8 +301,7 @@ include = [
 
 Wheel is `py3-none-any` because the code is pure Python; Linux-specific behaviour is runtime, not binary.
 
-## Install paths after `pip install hudctl`
-
+## Install paths after `pip install hudctl` / `uv tool install hudctl`
 | What              | Where                                              |
 | ----------------- | -------------------------------------------------- |
 | Package           | site-packages/`hudctl/`                            |
@@ -303,28 +315,27 @@ Wheel is `py3-none-any` because the code is pure Python; Linux-specific behaviou
 
 * SemVer: `MAJOR.MINOR.PATCH`
 * Single source of truth: `project.version` in `pyproject.toml`
+* Bump with `uv version` (or edit `pyproject.toml`, then `uv lock`)
 * Expose as `hudctl.__version__` (read from package metadata at runtime via `importlib.metadata`)
 * Git tags: `v0.1.0`, `v0.2.0`, ...
 * PyPI publish only from annotated tags via CI
 
 ## Release checklist (every publish)
 
-1. Tests green on CI (3.12, 3.13)
-2. `ruff check`, `mypy`, coverage gate met
+1. Tests green on CI (3.12, 3.13) via `uv sync --group dev` + `make check`
+2. `uv run ruff check`, `uv run mypy`, coverage gate met
 3. CHANGELOG.md updated
-4. Version bumped in `pyproject.toml`
+4. Version bumped (`uv version X.Y.Z` or edit + `uv lock`)
 5. Tag `vX.Y.Z`
-6. CI builds sdist + wheel, runs `twine check`
-7. CI publishes to PyPI with trusted publishing (OIDC) or token
-8. Verify: `pip install hudctl==X.Y.Z` and `hudctl version`
+6. CI runs `uv build --no-sources` then `uv publish` (Trusted Publishing / OIDC)
+7. Verify: `uv tool install hudctl==X.Y.Z` (or `pip install`) and `hudctl version`
 
 ## Local package smoke test (mandatory before first publish)
 
 ```bash
-python -m build
-python -m twine check dist/*
-python -m venv /tmp/hudctl-smoke
-/tmp/hudctl-smoke/bin/pip install dist/hudctl-*.whl
+uv build --no-sources
+uv venv /tmp/hudctl-smoke
+uv pip install --python /tmp/hudctl-smoke dist/hudctl-*.whl
 /tmp/hudctl-smoke/bin/hudctl version
 /tmp/hudctl-smoke/bin/hudctl doctor
 ```
@@ -558,7 +569,9 @@ Primary path (PyPI):
 
 ```bash
 pip install --user hudctl
-# or: pipx install hudctl
+# or (recommended for CLI tools)
+uv tool install hudctl
+
 hudctl install
 hudctl start
 ```
@@ -573,10 +586,12 @@ hudctl start
 * never duplicate configuration
 * be idempotent and reversible via `hudctl uninstall`
 
-Secondary path: editable install for contributors:
+Secondary path: contributor development with **uv** (required):
 
 ```bash
-pip install -e ".[dev]"
+uv python pin 3.12
+uv sync --group dev
+uv run hudctl version
 ```
 
 ---
@@ -641,21 +656,44 @@ Aligned with normal Python project practices for this workspace:
 | Line length | **88** (Black / Ruff default) |
 | Style | PEP 8 via Ruff; type hints on all function signatures |
 | Docs | Docstrings on all public modules, classes, functions |
-| Env | `.venv/` (never `venv/`); never commit secrets |
-| Deps | `pyproject.toml` only (no separate `requirements.txt` for the app) |
+| Env | **uv**-managed `.venv/` (never commit); pin via `.python-version` |
+| Deps | `pyproject.toml` + committed **`uv.lock`** (no `requirements.txt`) |
+| Project mgr | **uv** (`sync`, `run`, `lock`, `build`, `publish`, `tool`) |
 | Logging | stdlib `logging` only |
 | Paths | `pathlib` |
 | Data | `dataclasses` (or attrs-free stdlib) |
 | State | Avoid global mutable state |
 | Typing package | Ship `py.typed` (PEP 561) |
 
-**Do not add:** Black (redundant with Ruff format), isort (redundant with Ruff `I`), flake8 (redundant with Ruff).
+**Do not add:** Black (redundant with Ruff format), isort (redundant with Ruff `I`), flake8 (redundant with Ruff), Poetry, pip-tools, or bare `venv`/`pip install -e` workflows for this repo.
+
+**Do not use in Makefile/CI/docs for this project:** `python -m build`, `twine`, `python -m venv`, `pip install -e`.
 
 ---
 
 # Python Quality Tooling (locked config)
 
 All tool config lives in `pyproject.toml`. Phase 0 must include these sections.
+
+**Package/project manager: uv** (required for all development, CI, build, and publish).
+
+## uv project setup
+
+```bash
+# one-time / Phase 0
+uv python pin 3.12
+uv sync --group dev          # creates .venv, writes uv.lock
+uv lock                      # refresh lock after dep changes
+uv run <cmd>                 # run tools inside the project env
+uv build --no-sources        # sdist + wheel into dist/
+uv publish                   # upload to PyPI (CI / trusted publishing)
+uv tool install hudctl       # end-user CLI install (alternative to pip)
+uv version X.Y.Z             # bump project version
+```
+
+Commit **`uv.lock`** and **`.python-version`**. Ignore `.venv/`.
+
+CI should use the official `astral-sh/setup-uv` action and cache.
 
 ## Ruff
 
@@ -743,27 +781,31 @@ exclude_lines = [
 
 ## Makefile targets (required)
 
+All targets invoke tools via `uv run` / `uv build` (never bare global binaries).
+
 ```make
-lint:        ## ruff check
-fmt:         ## ruff format
-fmt-check:   ## ruff format --check
-typecheck:   ## mypy
-test:        ## pytest --cov
+lint:        ## uv run ruff check .
+fmt:         ## uv run ruff format .
+fmt-check:   ## uv run ruff format --check .
+typecheck:   ## uv run mypy
+test:        ## uv run pytest --cov --cov-report=term-missing
 check:       ## lint + fmt-check + typecheck + test
-build:       ## python -m build
-smoke:       ## install wheel in temp venv and run hudctl version
+build:       ## uv build --no-sources
+smoke:       ## uv venv + uv pip install wheel; hudctl version
+sync:        ## uv sync --group dev
 ```
 
-CI must run `make check` (or equivalent) on Python 3.12 and 3.13.
+CI must run `uv sync --group dev` then `make check` on Python 3.12 and 3.13.
 
 ## Local developer workflow
 
 ```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+uv python pin 3.12
+uv sync --group dev
 make fmt
 make check
+uv run hudctl version
+uv build --no-sources
 ```
 
 ## Optional: pre-commit (Phase 0 or 1)
@@ -795,8 +837,8 @@ Produce and keep aligned with code:
 * Architecture Guide
 * Plugin Development Guide
 * Theme Guide
-* Installation Guide (pip / pipx / systemd)
-* Packaging Guide (release process)
+* Installation Guide (uv tool / pip / systemd)
+* Packaging Guide (uv build / uv publish / release process)
 * FAQ
 * Troubleshooting Guide
 
@@ -850,32 +892,32 @@ Work in small commits. Each phase ends with tests green and a working installabl
 
 ## Phase 0 — Scaffolding and packaging skeleton
 
-**Goal:** Empty but installable `hudctl` package on the local machine, with quality tooling locked in.
+**Goal:** Empty but installable `hudctl` package on the local machine, with uv + quality tooling locked in.
 
 **Tasks:**
 
-1. Create `src/hudctl/` with `__init__.py`, `py.typed`, `__version__` via `importlib.metadata`
-2. Write complete `pyproject.toml` (hatchling, scripts, classifiers, urls)
-3. Embed locked `[tool.ruff]`, `[tool.mypy]`, `[tool.pytest.ini_options]`, `[tool.coverage.*]` sections from this PLAN
-4. Add minimal `hudctl.cli.main:main` that prints version and exits 0
-5. Add `Makefile` targets: `lint`, `fmt`, `fmt-check`, `typecheck`, `test`, `check`, `build`, `smoke`
-6. Add `tests/unit/test_version.py`
-7. Add GitHub Actions `ci.yml` running `make check` on 3.12 and 3.13
-8. Create `.venv/` locally (gitignored); never commit it
-9. Optional: `.pre-commit-config.yaml` for Ruff + mypy
-10. Update README with `pip install` / `pipx` instructions using name `hudctl`
+1. Ensure `uv` is available; pin Python with `uv python pin 3.12`
+2. Create `src/hudctl/` with `__init__.py`, `py.typed`, `__version__` via `importlib.metadata`
+3. Write complete `pyproject.toml` (hatchling, scripts, classifiers, urls, `[dependency-groups]`, `[tool.uv]`)
+4. Embed locked `[tool.ruff]`, `[tool.mypy]`, `[tool.pytest.ini_options]`, `[tool.coverage.*]` sections from this PLAN
+5. Add minimal `hudctl.cli.main:main` that prints version and exits 0
+6. `uv sync --group dev` and commit `uv.lock` + `.python-version`
+7. Add `Makefile` targets: `sync`, `lint`, `fmt`, `fmt-check`, `typecheck`, `test`, `check`, `build`, `smoke` (all via uv)
+8. Add `tests/unit/test_version.py`
+9. Add GitHub Actions `ci.yml` using `astral-sh/setup-uv`, matrix 3.12/3.13, `uv sync --group dev`, `make check`
+10. Optional: `.pre-commit-config.yaml` for Ruff + mypy
+11. Update README with `uv tool install hudctl` and `pip install hudctl`
 
 **Exit criteria:**
 
 ```bash
-python3.12 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+uv sync --group dev
 make check
-hudctl version
-python -m build && twine check dist/*
+uv run hudctl version
+uv build --no-sources
 ```
 
-**Commit:** `chore: scaffold hudctl package for PyPI`
+**Commit:** `chore: scaffold hudctl package with uv for PyPI`
 
 ---
 
@@ -1021,24 +1063,24 @@ python -m build && twine check dist/*
 
 ## Phase 9 — CI release pipeline and first PyPI publish
 
-**Goal:** Tagged releases publish `hudctl` to PyPI automatically.
+**Goal:** Tagged releases publish `hudctl` to PyPI automatically via uv.
 
 **Tasks:**
 
-1. `.github/workflows/release.yml` — on `v*` tag: build, `twine check`, publish
-2. Prefer PyPI Trusted Publishing (OIDC) over long-lived tokens
-3. Test publish to TestPyPI once before first production publish
+1. `.github/workflows/release.yml` — on `v*` tag: `uv build --no-sources`, then `uv publish` (Trusted Publishing / OIDC)
+2. Prefer PyPI Trusted Publishing over long-lived tokens (`UV_PUBLISH_TOKEN` only as fallback)
+3. Test publish to TestPyPI once before first production publish (`uv publish --index testpypi` or equivalent)
 4. CHANGELOG.md for 0.1.0
-5. Smoke install from TestPyPI in a clean venv
+5. Smoke install from TestPyPI: `uv tool install --index-url https://test.pypi.org/simple/ hudctl`
 
 **Exit criteria:**
 
 ```bash
-pip install hudctl==0.1.0
+uv tool install hudctl==0.1.0
 hudctl version
 ```
 
-**Commit:** `ci: add PyPI release workflow` then tag `v0.1.0`
+**Commit:** `ci: add uv-based PyPI release workflow` then tag `v0.1.0`
 
 ---
 
@@ -1065,15 +1107,17 @@ Each minor version is a PyPI release with CHANGELOG entry.
 6. Design public APIs carefully to minimise breaking changes before 1.0.
 7. Treat performance as a first-class requirement.
 8. **Always** validate packaging when touching `pyproject.toml` or entry points:
-   `python -m build && twine check dist/*`
+   `uv build --no-sources` (and smoke-install the wheel)
 9. Never use the distribution name `huddle` on PyPI; the published name is **`hudctl`**.
 10. Modify one module/segment at a time; commit frequently between phases; push only when instructed.
-11. Before considering any phase done, run `make check` (Ruff lint + format check + mypy + pytest/cov).
+11. Before considering any phase done, run `make check` (via uv: Ruff lint + format check + mypy + pytest/cov).
 12. Do not introduce Black, isort, or flake8 alongside Ruff.
+13. Use **uv** for all project env, lock, run, build, and publish steps. Do not document or script `pip install -e`, `python -m venv`, `python -m build`, or `twine` for this repository.
+14. Keep `uv.lock` committed and in sync after dependency or version changes (`uv lock` / `uv sync --group dev`).
 
 ---
 
 # Immediate Next Step
 
-Execute **Phase 0** only: scaffold `src/hudctl`, `pyproject.toml`, version CLI, tests, and local build/smoke. Stop and confirm before Phase 1.
+Execute **Phase 0** only: scaffold `src/hudctl`, `pyproject.toml`, `uv sync --group dev`, version CLI, tests, and `uv build` smoke. Stop and confirm before Phase 1.
 `)

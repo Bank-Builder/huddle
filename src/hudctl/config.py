@@ -17,6 +17,7 @@ class Config:
 
     theme: str = "developer"
     refresh: float = 1.0
+    log_level: str = "INFO"
     renderers: tuple[str, ...] = ("kitty", "bash")
     modules: tuple[str, ...] = (
         "cwd",
@@ -99,6 +100,13 @@ def config_from_mapping(data: dict[str, Any]) -> Config:
             raise ValueError(msg)
         updates["refresh"] = float(refresh)
 
+    if "log_level" in data:
+        log_level = data["log_level"]
+        if not isinstance(log_level, str):
+            msg = "log_level must be a string"
+            raise ValueError(msg)
+        updates["log_level"] = log_level.upper()
+
     if "renderers" in data:
         updates["renderers"] = _as_str_tuple(data["renderers"], field_name="renderers")
 
@@ -128,6 +136,7 @@ def save_config(config: Config, path: Path | None = None) -> Path:
     lines = [
         f'theme = "{config.theme}"',
         f"refresh = {config.refresh:g}",
+        f'log_level = "{config.log_level}"',
         "",
         "renderers = [",
         *[f'    "{name}",' for name in config.renderers],

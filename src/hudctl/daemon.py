@@ -172,6 +172,14 @@ async def run_async(
     def on_update(_event: SectionUpdated) -> None:
         write_state(engine.snapshot())
 
+    def on_reload() -> None:
+        logger.info("reload requested; refreshing collectors")
+        engine.collect_all()
+        write_state(engine.snapshot())
+
+    with contextlib.suppress(NotImplementedError):
+        loop.add_signal_handler(signal.SIGHUP, on_reload)
+
     engine.bus.subscribe_all(on_update)
     # Seed state immediately so status works before the first interval tick.
     engine.collect_all()
@@ -179,15 +187,27 @@ async def run_async(
     await scheduler.run(stop_event)
 
 
+def configure_logging(level: str = "INFO") -> None:
+    """Configure root logging for the daemon process."""
+    resolved = getattr(logging, level.upper(), logging.INFO)
+    logging.basicConfig(
+        level=resolved,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
+
 def run_foreground(*, config: Config | None = None) -> int:
     """Run the daemon in the foreground until SIGTERM/SIGINT."""
     lock: TextIO | None = None
     stop_event = asyncio.Event()
+    cfg = config if config is not None else load_config()
+    env_level = os.environ.get("HUDCTL_LOG_LEVEL")
+    configure_logging(env_level or cfg.log_level)
 
     try:
         lock = _acquire_lock()
         _write_pid()
-        asyncio.run(run_async(stop_event, config=config))
+        asyncio.run(run_async(stop_event, config=cfg))
         return 0
     except RuntimeError as exc:
         logger.error("%s", exc)
@@ -259,6 +279,17 @@ def stop_daemon(*, timeout: float = 5.0) -> int:
     _clear_pid()
     print(f"timed out waiting for pid {pid} to exit", file=sys.stderr)
     return 1
+
+
+def reload_daemon() -> int:
+    """Ask the running daemon to refresh collectors via SIGHUP."""
+    pid = read_pid()
+    if pid is None or not is_pid_alive(pid):
+        print("hudctl is not running", file=sys.stderr)
+        return 1
+    os.kill(pid, signal.SIGHUP)
+    print(f"sent SIGHUP to hudctl (pid {pid})")
+    return 0
 
 
 def restart_daemon() -> int:

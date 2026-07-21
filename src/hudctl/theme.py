@@ -72,6 +72,20 @@ def load_theme(name: str, *, user_dir: Path | None = None) -> Theme:
     raise FileNotFoundError(msg)
 
 
+def list_themes(*, user_dir: Path | None = None) -> tuple[str, ...]:
+    """Return sorted theme names from packaged and user theme dirs."""
+    names: set[str] = set()
+    packaged = resources.files("hudctl.themes")
+    for entry in packaged.iterdir():
+        if entry.name.endswith(".toml"):
+            names.add(entry.name.removesuffix(".toml"))
+    directory = user_dir
+    if directory is not None and directory.is_dir():
+        for path in directory.glob("*.toml"):
+            names.add(path.stem)
+    return tuple(sorted(names))
+
+
 def default_theme() -> Theme:
     """Return the packaged developer theme."""
     return load_theme("developer")

@@ -12,8 +12,10 @@ from hudctl.cli.install import (
     install,
     uninstall,
 )
+from hudctl.cli.ops import config_edit, theme_list_text, theme_set
 from hudctl.daemon import (
     format_status,
+    reload_daemon,
     restart_daemon,
     run_foreground,
     start_background,
@@ -33,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("start", help="Start the background daemon")
     subparsers.add_parser("stop", help="Stop the background daemon")
     subparsers.add_parser("restart", help="Restart the background daemon")
+    subparsers.add_parser("reload", help="Ask the daemon to refresh collectors")
     status = subparsers.add_parser("status", help="Show daemon status")
     status.add_argument(
         "--json",
@@ -45,6 +48,12 @@ def build_parser() -> argparse.ArgumentParser:
         "uninstall",
         help="Remove managed unit and shell hooks (keeps config)",
     )
+    theme = subparsers.add_parser("theme", help="List or set the active theme")
+    theme_sub = theme.add_subparsers(dest="theme_command")
+    theme_sub.add_parser("list", help="List available themes")
+    theme_set_parser = theme_sub.add_parser("set", help="Set the active theme")
+    theme_set_parser.add_argument("name", help="Theme name")
+    subparsers.add_parser("config", help="Edit the user config file")
     return parser
 
 
@@ -67,6 +76,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "restart":
         return restart_daemon()
 
+    if args.command == "reload":
+        return reload_daemon()
+
     if args.command == "status":
         text, code = format_status(as_json=bool(args.json))
         print(text)
@@ -82,6 +94,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "uninstall":
         print(format_install_report(uninstall(), verb="uninstall"))
         return 0
+
+    if args.command == "theme":
+        if args.theme_command == "set":
+            text, code = theme_set(args.name)
+            print(text)
+            return code
+        print(theme_list_text())
+        return 0
+
+    if args.command == "config":
+        return config_edit()
 
     print(__version__)
     return 0

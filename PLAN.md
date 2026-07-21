@@ -850,22 +850,27 @@ Work in small commits. Each phase ends with tests green and a working installabl
 
 ## Phase 0 — Scaffolding and packaging skeleton
 
-**Goal:** Empty but installable `hudctl` package on the local machine.
+**Goal:** Empty but installable `hudctl` package on the local machine, with quality tooling locked in.
 
 **Tasks:**
 
 1. Create `src/hudctl/` with `__init__.py`, `py.typed`, `__version__` via `importlib.metadata`
 2. Write complete `pyproject.toml` (hatchling, scripts, classifiers, urls)
-3. Add minimal `hudctl.cli.main:main` that prints version and exits 0
-4. Add `Makefile` targets: `lint`, `typecheck`, `test`, `build`, `smoke`
-5. Add `tests/unit/test_version.py`
-6. Add GitHub Actions `ci.yml` (3.12, 3.13)
-7. Update README with `pip install` / `pipx` instructions using name `hudctl`
+3. Embed locked `[tool.ruff]`, `[tool.mypy]`, `[tool.pytest.ini_options]`, `[tool.coverage.*]` sections from this PLAN
+4. Add minimal `hudctl.cli.main:main` that prints version and exits 0
+5. Add `Makefile` targets: `lint`, `fmt`, `fmt-check`, `typecheck`, `test`, `check`, `build`, `smoke`
+6. Add `tests/unit/test_version.py`
+7. Add GitHub Actions `ci.yml` running `make check` on 3.12 and 3.13
+8. Create `.venv/` locally (gitignored); never commit it
+9. Optional: `.pre-commit-config.yaml` for Ruff + mypy
+10. Update README with `pip install` / `pipx` instructions using name `hudctl`
 
 **Exit criteria:**
 
 ```bash
+python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
+make check
 hudctl version
 python -m build && twine check dist/*
 ```
@@ -1063,6 +1068,8 @@ Each minor version is a PyPI release with CHANGELOG entry.
    `python -m build && twine check dist/*`
 9. Never use the distribution name `huddle` on PyPI; the published name is **`hudctl`**.
 10. Modify one module/segment at a time; commit frequently between phases; push only when instructed.
+11. Before considering any phase done, run `make check` (Ruff lint + format check + mypy + pytest/cov).
+12. Do not introduce Black, isort, or flake8 alongside Ruff.
 
 ---
 

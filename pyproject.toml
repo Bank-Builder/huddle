@@ -1,0 +1,143 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hudctl"
+version = "0.1.0"
+description = "Unified terminal context engine with pluggable renderers"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [
+  { name = "bank-builder" },
+]
+keywords = [
+  "terminal",
+  "prompt",
+  "kitty",
+  "bash",
+  "zsh",
+  "context",
+  "daemon",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: System :: Shells",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "pytest-cov>=5",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+
+[tool.uv]
+package = true
+
+[project.scripts]
+hudctl = "hudctl.cli.main:main"
+
+[project.entry-points."hudctl.collectors"]
+
+[project.entry-points."hudctl.renderers"]
+
+[project.urls]
+Homepage = "https://github.com/Bank-Builder/huddle"
+Documentation = "https://github.com/Bank-Builder/huddle#readme"
+Repository = "https://github.com/Bank-Builder/huddle"
+Issues = "https://github.com/Bank-Builder/huddle/issues"
+Changelog = "https://github.com/Bank-Builder/huddle/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/hudctl",
+  "tests",
+  "LICENSE",
+  "README.md",
+  "pyproject.toml",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "W",
+  "F",
+  "I",
+  "B",
+  "UP",
+  "SIM",
+  "RUF",
+  "N",
+  "ASYNC",
+  "S",
+  "T20",
+  "C4",
+  "PT",
+]
+ignore = [
+  "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+"src/hudctl/cli/**" = ["T20"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+warn_return_any = true
+show_error_codes = true
+pretty = true
+files = ["src/hudctl"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "--strict-config",
+]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+source = ["hudctl"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = false
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "\\.\\.\\.",
+]

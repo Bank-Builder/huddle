@@ -1,0 +1,13 @@
+separator = " │ "
+cwd_icon = ""
+git_icon = " "
+clock_icon = ""
+cpu_icon = "CPU "
+memory_icon = "MEM "
+network_icon = "NET "
+show_cwd = true
+show_git = true
+show_clock = true
+show_cpu = true
+show_memory = true
+show_network = true

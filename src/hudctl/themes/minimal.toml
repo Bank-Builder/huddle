@@ -1,0 +1,13 @@
+separator = " | "
+cwd_icon = ""
+git_icon = ""
+clock_icon = ""
+cpu_icon = ""
+memory_icon = ""
+network_icon = ""
+show_cwd = true
+show_git = true
+show_clock = true
+show_cpu = false
+show_memory = false
+show_network = false

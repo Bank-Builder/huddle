@@ -617,24 +617,174 @@ Plugin API stable after v1.0.
 
 # Testing
 
-* pytest
-* Target: >90% coverage
+* pytest + pytest-cov
+* Target: **>90% coverage** (CI fail below gate)
 * Unit tests for collectors (mocked `/proc`, git), engine, renderers, CLI
 * Integration tests for daemon start/stop/status (no root)
 * Packaging tests: import, entry point, version metadata
 * No tests requiring root
+* Prefer factories/fixtures over ad-hoc setup; mock external services
 
 ---
 
 # Coding Standards
 
-* Ruff (lint + format; Black-compatible)
-* mypy (strict for `src/hudctl`)
-* pyright-compatible public APIs
-* dataclasses / pathlib / logging only
-* type hints everywhere
-* avoid global mutable state
-* PEP 561 `py.typed` marker shipped in the wheel
+Aligned with normal Python project practices for this workspace:
+
+| Practice | Tool / rule |
+| -------- | ----------- |
+| Lint | **Ruff** (`ruff check`) |
+| Format | **Ruff format** (Black-compatible; do **not** also run Black) |
+| Import sort | **Ruff** (`I` rules; replaces isort) |
+| Types | **mypy --strict** on `src/hudctl`; public APIs pyright-compatible |
+| Tests | **pytest** + **pytest-cov** |
+| Line length | **88** (Black / Ruff default) |
+| Style | PEP 8 via Ruff; type hints on all function signatures |
+| Docs | Docstrings on all public modules, classes, functions |
+| Env | `.venv/` (never `venv/`); never commit secrets |
+| Deps | `pyproject.toml` only (no separate `requirements.txt` for the app) |
+| Logging | stdlib `logging` only |
+| Paths | `pathlib` |
+| Data | `dataclasses` (or attrs-free stdlib) |
+| State | Avoid global mutable state |
+| Typing package | Ship `py.typed` (PEP 561) |
+
+**Do not add:** Black (redundant with Ruff format), isort (redundant with Ruff `I`), flake8 (redundant with Ruff).
+
+---
+
+# Python Quality Tooling (locked config)
+
+All tool config lives in `pyproject.toml`. Phase 0 must include these sections.
+
+## Ruff
+
+```toml
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",     # pycodestyle errors
+  "W",     # pycodestyle warnings
+  "F",     # pyflakes
+  "I",     # isort
+  "B",     # flake8-bugbear
+  "UP",    # pyupgrade
+  "SIM",   # flake8-simplify
+  "RUF",   # ruff-specific
+  "N",     # pep8-naming
+  "ASYNC", # flake8-async
+  "S",     # flake8-bandit (security); tests may ignore S101
+  "T20",   # flake8-print (no print in library code)
+  "C4",    # flake8-comprehensions
+  "PT",    # flake8-pytest-style
+]
+ignore = [
+  "E501",  # line length handled by formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]  # assert allowed in tests
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+```
+
+## mypy
+
+```toml
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+warn_return_any = true
+show_error_codes = true
+pretty = true
+files = ["src/hudctl"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+```
+
+## pytest / coverage
+
+```toml
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "--strict-config",
+]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+source = ["hudctl"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = false
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "\\.\\.\\.",
+]
+```
+
+## Makefile targets (required)
+
+```make
+lint:        ## ruff check
+fmt:         ## ruff format
+fmt-check:   ## ruff format --check
+typecheck:   ## mypy
+test:        ## pytest --cov
+check:       ## lint + fmt-check + typecheck + test
+build:       ## python -m build
+smoke:       ## install wheel in temp venv and run hudctl version
+```
+
+CI must run `make check` (or equivalent) on Python 3.12 and 3.13.
+
+## Local developer workflow
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+make fmt
+make check
+```
+
+## Optional: pre-commit (Phase 0 or 1)
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9  # pin; bump deliberately
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies: []
+```
+
+pre-commit is recommended but not a substitute for CI `make check`.
 
 ---
 

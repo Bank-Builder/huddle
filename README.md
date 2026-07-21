@@ -68,6 +68,8 @@ Logging: set `log_level` in config, or `HUDCTL_LOG_LEVEL` in the environment.
 
 ## What is collected
 
+Enabled by default in `config.toml` `modules`:
+
 | Module | Source | Notes |
 |--------|--------|-------|
 | `cwd` | process cwd | `~/...` display when under home |
@@ -77,7 +79,16 @@ Logging: set `log_level` in config, or `HUDCTL_LOG_LEVEL` in the environment.
 | `network` | `/proc/net/dev` | aggregate rx/tx bps (skips `lo`) |
 | `clock` | local time | hhmm + ISO |
 
-Enable/disable via `modules` in `config.toml`.
+Optional modules (add to `modules` to enable):
+
+| Module | Source | Notes |
+|--------|--------|-------|
+| `hostname` | stdlib | short + FQDN |
+| `ssh` | env (`SSH_*`) | active session / client IP |
+| `docker` | socket + cgroup | available / in-container |
+| `kubernetes` | kubeconfig | current-context / in-cluster |
+| `battery` | sysfs | capacity / status |
+| `vpn` | `/sys/class/net` | tun/tap/wg-style interfaces |
 
 ## Themes
 

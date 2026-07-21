@@ -15,12 +15,18 @@ from pathlib import Path
 from typing import Any, TextIO
 
 from hudctl.collectors.base import Collector
+from hudctl.collectors.battery import BatteryCollector
 from hudctl.collectors.clock import ClockCollector
 from hudctl.collectors.cpu import CpuCollector
 from hudctl.collectors.cwd import CwdCollector
+from hudctl.collectors.docker import DockerCollector
 from hudctl.collectors.git import GitCollector
+from hudctl.collectors.hostname import HostnameCollector
+from hudctl.collectors.kubernetes import KubernetesCollector
 from hudctl.collectors.memory import MemoryCollector
 from hudctl.collectors.network import NetworkCollector
+from hudctl.collectors.ssh import SshCollector
+from hudctl.collectors.vpn import VpnCollector
 from hudctl.config import Config, ensure_dirs, load_config, state_dir
 from hudctl.engine import Engine
 from hudctl.events import SectionUpdated
@@ -35,6 +41,12 @@ _COLLECTORS: dict[str, type[Collector]] = {
     "memory": MemoryCollector,
     "network": NetworkCollector,
     "git": GitCollector,
+    "hostname": HostnameCollector,
+    "ssh": SshCollector,
+    "docker": DockerCollector,
+    "kubernetes": KubernetesCollector,
+    "battery": BatteryCollector,
+    "vpn": VpnCollector,
 }
 
 

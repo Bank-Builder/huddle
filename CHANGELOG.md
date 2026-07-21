@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Collectors: hostname, ssh, docker, kubernetes, battery, vpn
 - Release workflow that builds on `v*` tags and uploads artifacts
 - Manual workflow_dispatch PyPI publish gate (disabled by default)
 

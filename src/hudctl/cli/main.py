@@ -6,6 +6,7 @@ import argparse
 import sys
 
 from hudctl import __version__
+from hudctl.cli.doctor import doctor_exit_code, format_report, run_checks
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -16,6 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command")
     subparsers.add_parser("version", help="Print package version")
+    subparsers.add_parser("doctor", help="Diagnose environment and paths")
     return parser
 
 
@@ -24,8 +26,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    # Default and explicit version both print the package version.
-    _ = args.command
+    if args.command == "doctor":
+        results = run_checks()
+        print(format_report(results))
+        return doctor_exit_code(results)
+
     print(__version__)
     return 0
 

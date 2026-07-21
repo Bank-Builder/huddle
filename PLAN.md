@@ -1120,4 +1120,3 @@ Each minor version is a PyPI release with CHANGELOG entry.
 # Immediate Next Step
 
 Execute **Phase 0** only: scaffold `src/hudctl`, `pyproject.toml`, `uv sync --group dev`, version CLI, tests, and `uv build` smoke. Stop and confirm before Phase 1.
-`)

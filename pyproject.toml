@@ -72,6 +72,7 @@ include = [
 [tool.hatch.build.targets.wheel.force-include]
 "src/hudctl/themes/minimal.toml" = "hudctl/themes/minimal.toml"
 "src/hudctl/themes/developer.toml" = "hudctl/themes/developer.toml"
+"src/hudctl/systemd/huddle.service" = "hudctl/systemd/huddle.service"
 
 [tool.ruff]
 target-version = "py312"

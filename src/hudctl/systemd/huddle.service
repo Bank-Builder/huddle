@@ -1,0 +1,13 @@
+[Unit]
+Description=Huddle terminal context engine (hudctl)
+Documentation=https://github.com/Bank-Builder/huddle
+After=default.target
+
+[Service]
+Type=simple
+ExecStart={exec_start}
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

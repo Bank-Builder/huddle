@@ -7,6 +7,11 @@ import sys
 
 from hudctl import __version__
 from hudctl.cli.doctor import doctor_exit_code, format_report, run_checks
+from hudctl.cli.install import (
+    format_install_report,
+    install,
+    uninstall,
+)
 from hudctl.daemon import (
     format_status,
     restart_daemon,
@@ -35,6 +40,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Emit status as JSON",
     )
     subparsers.add_parser("run", help="Run the daemon in the foreground")
+    subparsers.add_parser("install", help="Install user config, unit, and shell hooks")
+    subparsers.add_parser(
+        "uninstall",
+        help="Remove managed unit and shell hooks (keeps config)",
+    )
     return parser
 
 
@@ -64,6 +74,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "run":
         return run_foreground()
+
+    if args.command == "install":
+        print(format_install_report(install(), verb="install"))
+        return 0
+
+    if args.command == "uninstall":
+        print(format_install_report(uninstall(), verb="uninstall"))
+        return 0
 
     print(__version__)
     return 0

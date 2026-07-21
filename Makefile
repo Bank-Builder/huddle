@@ -1,4 +1,14 @@
-.PHONY: sync lint fmt check test typecheck build
+.PHONY: help sync lint fmt check test typecheck build
+
+help:
+	@echo "Targets:"
+	@echo "  sync       Install/sync deps with uv"
+	@echo "  lint       Ruff check + format check"
+	@echo "  fmt        Ruff format"
+	@echo "  typecheck  mypy"
+	@echo "  test       pytest with coverage"
+	@echo "  check      lint + typecheck + test"
+	@echo "  build      Build sdist and wheel"
 
 sync:
 	uv sync --group dev
